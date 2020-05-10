@@ -1,0 +1,19 @@
+dn: dc=mydomain,dc=com
+objectClass: top
+objectClass: dcObject
+objectclass: organization
+o: mydomain
+dc: mydomain
+
+dn: cn=ldapadm,dc=mydomain,dc=com
+objectClass: organizationalRole
+cn: ldapadm
+description: Directory Manager
+
+dn: ou=People,dc=mydomain,dc=com
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Group,dc=mydomain,dc=com
+objectClass: organizationalUnit
+ou: Group
