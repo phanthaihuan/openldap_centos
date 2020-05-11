@@ -1,14 +1,14 @@
 dn: dc=mydomain,dc=com
 objectClass: top
 objectClass: dcObject
-objectclass: organization
-o: mydomain
+objectClass: organization
+o: Asean Fan Vietnam
 dc: mydomain
 
 dn: cn=ldapadm,dc=mydomain,dc=com
 objectClass: organizationalRole
 cn: ldapadm
-description: Directory Manager
+description: LDAP Manager
 
 dn: ou=People,dc=mydomain,dc=com
 objectClass: organizationalUnit

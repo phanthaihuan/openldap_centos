@@ -17,7 +17,7 @@ olcRootDN: cn=ldapadm,dc=mydomain,dc=com
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 add: olcRootPW
-olcRootPW: {SSHA}qUf3VZ1irGjG7RwqKc0nAaqSJpH0+T7p
+olcRootPW: 
 
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify

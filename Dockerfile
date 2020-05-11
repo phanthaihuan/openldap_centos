@@ -1,9 +1,8 @@
 FROM centos:centos7
 
 RUN yum -y update && \
-    yum -y install openldap-servers openldap-clients
-
-RUN yum clean all
+    yum -y install openldap-servers openldap-clients openssl && \
+    yum clean all
 
 # Default data + default configuration
 RUN mkdir -p /root/tmp/openldap && \
@@ -11,29 +10,19 @@ RUN mkdir -p /root/tmp/openldap && \
 
 # Copy default data + default configuration
 RUN cp -rfa /etc/openldap/* /root/tmp/openldap && \
-    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG && \
-    cp -rfa /var/lib/ldap/* /root/tmp/ldap
-    
+    cp /usr/share/openldap-servers/DB_CONFIG.example /root/tmp/ldap/DB_CONFIG
 
 # Copy management scripts
 COPY script/*.sh /
 RUN chmod +x /*.sh
 
-# Copy neccessary files to conigure new OpenLDAP service
-COPY template/chrootpw.ldif /
-COPY template/chdomain.ldif /
-COPY template/basedomain.ldif /
+# Copy template files to configure new OpenLDAP service
+COPY template/* /
 
-# Copy samba schema to integrate samba to OpenLDAP
-COPY template/samba.ldif /
-COPY template/samba.schema /
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /*.sh
-
+# systemctl replacement script
 COPY script/systemctl.py /usr/bin/systemctl
 RUN chmod +x /usr/bin/systemctl
 
-EXPOSE 389 636
+CMD /usr/bin/systemctl
 
-ENTRYPOINT ["/entrypoint.sh"]
+EXPOSE 389 636

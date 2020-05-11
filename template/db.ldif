@@ -1,14 +1,14 @@
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcSuffix
-olcSuffix: dc=ldap,dc=mydomain,dc=com
+olcSuffix: dc=mydomain,dc=com
 
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcRootDN
-olcRootDN: cn=ldapadm,dc=ldap,dc=mydomain,dc=com
+olcRootDN: cn=ldapadm,dc=mydomain,dc=com
 
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcRootPW
-olcRootPW: admin@ldap
+olcRootPW:
