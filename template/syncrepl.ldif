@@ -1,21 +1,14 @@
-# create new
 dn: olcDatabase={2}hdb,cn=config
-changeType: modify
+changetype: modify
 add: olcSyncRepl
 olcSyncRepl: rid=001
-  # LDAP server's URI
   provider=ldap://10.0.0.30:389/
   bindmethod=simple
-  # own domain name
   binddn="cn=Manager,dc=srv,dc=world"
-  # directory manager's password
   credentials=password
   searchbase="dc=srv,dc=world"
-  # includes subtree
   scope=sub
   schemachecking=on
   type=refreshAndPersist
-  # [retry interval] [retry times] [interval of re-retry] [re-retry times]
   retry="30 5 300 3"
-  # replication interval
   interval=00:00:05:00

@@ -10,36 +10,23 @@ NC='\033[0m'
 config="/config.txt"
 configdir="/etc/openldap"
 datadir="/var/lib/ldap"
-
-CN_ADMIN=""
-LDAP_PASS=""
-LDAP_MASTER_IP=""
-LDAP_MASTER_PORT=""
-FQDN=""
-DC1=""
-DC2=""
-HASHED_PASS=`slappasswd -h {SSHA} -s $LDAP_PASS`
-
-while IFS= read -r line
-do
-    if [[ "$line" =~ .*"CN_ADMIN".* ]]; then
-        CN_ADMIN="`echo "$line" | awk '{print $3}'`"
-    fi
-    if [[ "$line" =~ .*"LDAP_PASS".* ]]; then
-        LDAP_PASS="`echo "$line" | awk '{print $3}'`"
-    fi
-    if [[ "$line" =~ .*"LDAP_MASTER_IP".* ]]; then
-        LDAP_MASTER_IP="`echo "$line" | awk '{print $3}'`"
-    fi
-    if [[ "$line" =~ .*"LDAP_MASTER_PORT".* ]]; then
-        LDAP_MASTER_PORT="`echo "$line" | awk '{print $3}'`"
-    fi
-    if [[ "$line" =~ .*"FQDN".* ]]; then
-        FQDN="`echo "$line" | awk '{print $3}'`"
-        DC1=`echo $FQDN | cut -d. -f1` # get DC1=mydomain
-        DC2=`echo $FQDN | cut -d. -f2` # get DC2=com
-    fi
-done < $file 
+dos2unix $config # Remove Windows End Of File
+dos2unix /basedomain.ldif
+dos2unix /chdomain.ldif
+dos2unix /chrootpw.ldif
+dos2unix /db.ldif
+dos2unix /mod_ssl.ldif
+dos2unix /mod_syncprov.ldif
+dos2unix /monitor.ldif
+dos2unix /syncprov.ldif
+dos2unix /syncrepl.ldif
+CN_ADMIN="`cat $config | grep "CN_ADMIN" | awk '{print $3}'`"
+FQDN="`cat $config | grep "FQDN" | awk '{print $3}'`"
+LDAP_MASTER_IP="`cat $config | grep "LDAP_MASTER_IP" | awk '{print $3}'`"
+LDAP_MASTER_PORT="`cat $config | grep "LDAP_MASTER_PORT" | awk '{print $3}'`"
+LDAP_PASS="`cat $config | grep "LDAP_PASS" | awk '{print $3}'`"
+DC1=`echo $FQDN | cut -d. -f1` # get DC1=mydomain
+DC2=`echo $FQDN | cut -d. -f2` # get DC2=com
 
 function build_chrootpw()
 {
@@ -60,7 +47,7 @@ function build_chdomain()
     echo -e "$GREEN Building chdomain.ldif$NC"
     sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chdomain.ldif
     sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /chdomain.ldif
-    sed -i -e "s@dc=mydomain@cn=$DC1@g" /chdomain.ldif
+    sed -i -e "s@dc=mydomain@dc=$DC1@g" /chdomain.ldif
     sed -i -e "s@dc=com@dc=$DC2@g" /chdomain.ldif
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /chdomain.ldif
 }
@@ -69,7 +56,7 @@ function build_basedomain()
 {
     echo -e "$GREEN Building basedomain.ldif$NC"
     sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /basedomain.ldif
-    sed -i -e "s@dc=mydomain@cn=$DC1@g" /basedomain.ldif
+    sed -i -e "s@dc=mydomain@dc=$DC1@g" /basedomain.ldif
     sed -i -e "s@dc=com@dc=$DC2@g" /basedomain.ldif
     ldapadd -x -w $LDAP_PASS -D "cn=$CN_ADMIN,dc=$DC1,dc=$DC2" -f /basedomain.ldif
 }
@@ -78,9 +65,10 @@ function build_replication()
 {
     echo -e "$GREEN Building Master-Slave Replication$NC"
     sed -i -e "s@provider=ldap://:.*@provider=ldap://$LDAP_MASTER_IP:$LDAP_MASTER_PORT@g" /syncrepl.ldif
-    sed -i -e "s@dc=srv.*@dc=${DC1}@g" /syncrepl.ldif
-    sed -i -e "s@dc=world.*@dc=${DC2}@g" /syncrepl.ldif
-    sed -i -e "s@cn=Manager.*@cn=${ADMIN_LDAP}@g" /syncrepl.ldif
+    sed -i -e "s@dc=srv@dc=${DC1}@g" /syncrepl.ldif
+    sed -i -e "s@dc=world@dc=${DC2}@g" /syncrepl.ldif
+    sed -i -e "s@cn=Manager@cn=${CN_ADMIN}@g" /syncrepl.ldif
+    sed -i -e "s@credentials=password@credentials=${LDAP_PASS}@g" /syncrepl.ldif
 
     ldapadd -Y EXTERNAL -H ldapi:/// -f /syncrepl.ldif
 }
@@ -97,7 +85,7 @@ else
     echo -e "$GREEN ---LDAP Master Domain: ${DC1}.${DC2} $NC"
     echo -e "$GREEN ---LDAP Master IP    : ${LDAP_MASTER_IP} $NC"
     echo -e "$GREEN ---LDAP Master Port  : ${LDAP_MASTER_PORT} $NC"
-    echo -e "$GREEN ---LDAP Master Admin : ${ADMIN_LDAP} $NC"
+    echo -e "$GREEN ---LDAP Master Admin : ${CN_ADMIN} $NC"
     echo -e "$GREEN ---------------------------------------$NC"
     
     cp /root/tmp/openldap/* /etc/openldap/ -rfa
@@ -119,7 +107,8 @@ else
     fi 
 
     echo -e "$GREEN Configuring OpenLDAP...$NC"
-    
+    HASHED_PASS=`slappasswd -h {SSHA} -s "$LDAP_PASS"`
+
     echo -e "$GREEN Setting up OpenLDAP database.$NC"
     /usr/bin/cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
     chown -R ldap:ldap $datadir

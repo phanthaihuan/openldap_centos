@@ -17,8 +17,8 @@ openssl req -new -passin file:$TLS/passphrase.txt -key $TLS/server.key -out $TLS
 cp $TLS/server.key $TLS/server.key.org
 openssl rsa -in $TLS/server.key.org -passin file:$TLS/passphrase.txt -out $TLS/server.key
 
-# Generating a Self-Signed Certificate for 1 year
-openssl x509 -req -days 365 -in $TLS/server.csr -signkey $TLS/server.key -out $TLS/server.crt
+# Generating a Self-Signed Certificate for 10 year
+openssl x509 -req -days 3650 -in $TLS/server.csr -signkey $TLS/server.key -out $TLS/server.crt
 
 /usr/bin/cp $TLS/server.key $TLS/server.crt $TLS/ca-bundle.crt $TARGET
 chown -R ldap:ldap $TARGET
