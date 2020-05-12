@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -6,14 +7,74 @@ CYAN='\033[1;36m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+config="/config.txt"
 configdir="/etc/openldap"
 datadir="/var/lib/ldap"
 
-ADMIN_LDAP="ldapadm"
-DC1="mydomain"
-DC2="com"
+CN_ADMIN=""
+LDAP_PASS=""
+LDAP_MASTER_IP=""
+LDAP_MASTER_PORT=""
+FQDN=""
+DC1=""
+DC2=""
+HASHED_PASS=`slappasswd -h {SSHA} -s $LDAP_PASS`
 
-LDAP_PASS='adminldap'
+while IFS= read -r line
+do
+    if [[ "$line" =~ .*"CN_ADMIN".* ]]; then
+        CN_ADMIN="`echo "$line" | awk '{print $3}'`"
+    fi
+    if [[ "$line" =~ .*"LDAP_PASS".* ]]; then
+        LDAP_PASS="`echo "$line" | awk '{print $3}'`"
+    fi
+    if [[ "$line" =~ .*"LDAP_MASTER_IP".* ]]; then
+        LDAP_MASTER_IP="`echo "$line" | awk '{print $3}'`"
+    fi
+    if [[ "$line" =~ .*"LDAP_MASTER_PORT".* ]]; then
+        LDAP_MASTER_PORT="`echo "$line" | awk '{print $3}'`"
+    fi
+    if [[ "$line" =~ .*"FQDN".* ]]; then
+        FQDN="`echo "$line" | awk '{print $3}'`"
+        DC1=`echo $FQDN | cut -d. -f1` # get DC1=mydomain
+        DC2=`echo $FQDN | cut -d. -f2` # get DC2=com
+    fi
+done < $file 
+
+
+function build_chrootpw()
+{
+    echo -e "$GREEN Building chrootpw.ldif$NC"    
+    sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chrootpw.ldif
+}
+
+function import_schema() 
+{
+    echo -e "$GREEN Import basic schema to OpenLDAP.$NC"
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+}
+
+function build_chdomain() 
+{
+    echo -e "$GREEN Building chdomain.ldif$NC"
+    sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chdomain.ldif
+    sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /chdomain.ldif
+    sed -i -e "s@dc=mydomain@cn=$DC1@g" /chdomain.ldif
+    sed -i -e "s@dc=com@dc=$DC2@g" /chdomain.ldif
+    ldapmodify -Y EXTERNAL -H ldapi:/// -f /chdomain.ldif
+}
+
+function build_basedomain() 
+{
+    echo -e "$GREEN Building basedomain.ldif$NC"
+    sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /basedomain.ldif
+    sed -i -e "s@dc=mydomain@cn=$DC1@g" /basedomain.ldif
+    sed -i -e "s@dc=com@dc=$DC2@g" /basedomain.ldif
+    ldapadd -x -w $LDAP_PASS -D "cn=$CN_ADMIN,dc=$DC1,dc=$DC2" -f /basedomain.ldif
+}
+
 
 if [ -n "$(ls -A $configdir)" ] && [ -n "$(ls -A $datadir)" ]; then
     chown -R ldap:ldap $configdir
@@ -54,10 +115,8 @@ else
         exit 1
     fi 
 
-
     echo -e "$GREEN Configuring OpenLDAP...$NC"
-    HASHED_PASS=`slappasswd -h {SSHA} -s $LDAP_PASS`
-
+    
     echo -e "$GREEN Setting up OpenLDAP database.$NC"
     /usr/bin/cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
     chown -R ldap:ldap $datadir
@@ -65,26 +124,19 @@ else
     echo -e "$GREEN Building chrootpw.ldif$NC"    
     sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chrootpw.ldif
 
-    echo -e "$GREEN Import chrootpw.ldif to OpenLDAP.$NC"
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /chrootpw.ldif
+    ## Build and import chrootpw.ldif
+    build_chrootpw
 
-    echo -e "$GREEN Import basic schema to OpenLDAP.$NC"
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+    ## Import base schema
+    import_schema
+       
+    ## Build and import chdomain.ldif
+    build_chdomain
 
-    echo -e "$GREEN Building chdomain.ldif$NC"
-    sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chdomain.ldif
-    ldapmodify -Y EXTERNAL -H ldapi:/// -f /chdomain.ldif
-
-    echo -e "$GREEN Building basedomain.ldif$NC"
-    ldapadd -x -w $LDAP_PASS -D "cn=$ADMIN_LDAP,dc=$DC1,dc=$DC2" -f /basedomain.ldif
-
-    # echo -e "$GREEN Building db.ldif$NC"
-    # sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /db.ldif
-    # ldapmodify -Y EXTERNAL -H ldapi:/// -f /db.ldif
-    
-    # echo -e "$GREEN Building monitor.ldif$NC"
+    ## Build and import basedomain.ldif
+    build_basedomain
+        
+    echo -e "$GREEN Import monitor.ldif$NC"
     # ldapmodify -Y EXTERNAL -H ldapi:/// -f /monitor.ldif
 
     echo -e "$GREEN Generating CA and private key.$NC"
