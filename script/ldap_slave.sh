@@ -10,16 +10,18 @@ NC='\033[0m'
 config="/config.txt"
 configdir="/etc/openldap"
 datadir="/var/lib/ldap"
-dos2unix $config # Remove Windows End Of File
+
+# Remove Windows End Of File
+dos2unix $config
 dos2unix /basedomain.ldif
 dos2unix /chdomain.ldif
 dos2unix /chrootpw.ldif
 dos2unix /db.ldif
 dos2unix /mod_ssl.ldif
 dos2unix /mod_syncprov.ldif
-dos2unix /monitor.ldif
 dos2unix /syncprov.ldif
 dos2unix /syncrepl.ldif
+
 CN_ADMIN="`cat $config | grep "CN_ADMIN" | awk '{print $3}'`"
 FQDN="`cat $config | grep "FQDN" | awk '{print $3}'`"
 LDAP_MASTER_IP="`cat $config | grep "LDAP_MASTER_IP" | awk '{print $3}'`"
@@ -46,25 +48,35 @@ function build_chdomain()
 {
     echo -e "$GREEN Building chdomain.ldif$NC"
     sed -i -e "s@olcRootPW:.*@olcRootPW: $HASHED_PASS@g" /chdomain.ldif
-    sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /chdomain.ldif
-    sed -i -e "s@dc=mydomain@dc=$DC1@g" /chdomain.ldif
-    sed -i -e "s@dc=com@dc=$DC2@g" /chdomain.ldif
+    sed -i -e "s@cn=Manager@cn=$CN_ADMIN@g" /chdomain.ldif
+    sed -i -e "s@dc=srv@dc=$DC1@g" /chdomain.ldif
+    sed -i -e "s@dc=world@dc=$DC2@g" /chdomain.ldif
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /chdomain.ldif
 }
 
 function build_basedomain() 
 {
     echo -e "$GREEN Building basedomain.ldif$NC"
-    sed -i -e "s@cn=ldapadm@cn=$CN_ADMIN@g" /basedomain.ldif
-    sed -i -e "s@dc=mydomain@dc=$DC1@g" /basedomain.ldif
-    sed -i -e "s@dc=com@dc=$DC2@g" /basedomain.ldif
+    sed -i -e "s@cn=Manager@cn=$CN_ADMIN@g" /basedomain.ldif
+    sed -i -e "s@dc=srv@dc=$DC1@g" /basedomain.ldif
+    sed -i -e "s@dc=world@dc=$DC2@g" /basedomain.ldif
+    sed -i -e "s@dc\: Srv@dc\: $DC1@g" /basedomain.ldif
     ldapadd -x -w $LDAP_PASS -D "cn=$CN_ADMIN,dc=$DC1,dc=$DC2" -f /basedomain.ldif
 }
 
+
 function build_replication()
 {
+    echo -e "$GREEN Add syncprov module for replication.$NC"
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /mod_syncprov.ldif
+    echo -e "$GREEN syncprov module is added.$NC"
+
+    echo -e "$GREEN Adding overlay definition to OpenLDAP.$NC"
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /syncprov.ldif
+    echo -e "$GREEN Overlay entry is added to OpenLDAP.$NC"
+
     echo -e "$GREEN Building Master-Slave Replication$NC"
-    sed -i -e "s@provider=ldap://:.*@provider=ldap://$LDAP_MASTER_IP:$LDAP_MASTER_PORT@g" /syncrepl.ldif
+    sed -i -e "s@provider=ldap://.*@provider=ldap://$LDAP_MASTER_IP:$LDAP_MASTER_PORT@g" /syncrepl.ldif
     sed -i -e "s@dc=srv@dc=${DC1}@g" /syncrepl.ldif
     sed -i -e "s@dc=world@dc=${DC2}@g" /syncrepl.ldif
     sed -i -e "s@cn=Manager@cn=${CN_ADMIN}@g" /syncrepl.ldif
@@ -138,7 +150,6 @@ else
         read -p ""
         exit 1
     fi 
-
 fi
 
 exit 0

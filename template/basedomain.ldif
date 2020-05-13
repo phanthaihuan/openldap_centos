@@ -1,19 +1,19 @@
-dn: dc=mydomain,dc=com
+dn: dc=srv,dc=world
 objectClass: top
 objectClass: dcObject
-objectClass: organization
-o: Asean Fan Vietnam
-dc: mydomain
+objectclass: organization
+o: Server World
+dc: Srv
 
-dn: cn=ldapadm,dc=mydomain,dc=com
+dn: cn=Manager,dc=srv,dc=world
 objectClass: organizationalRole
-cn: ldapadm
-description: LDAP Manager
+cn: Manager
+description: Directory Manager
 
-dn: ou=People,dc=mydomain,dc=com
+dn: ou=People,dc=srv,dc=world
 objectClass: organizationalUnit
 ou: People
 
-dn: ou=Group,dc=mydomain,dc=com
+dn: ou=Group,dc=srv,dc=world
 objectClass: organizationalUnit
 ou: Group

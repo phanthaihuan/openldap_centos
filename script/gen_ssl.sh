@@ -1,4 +1,4 @@
-# Credit to https://gist.github.com/thbkrkr
+# Credit to https://gist.github.com/thbkrkr/aa16435cb6c183e55a33
 
 TLS="/etc/pki/tls/certs"
 TARGET="/etc/openldap/certs"
@@ -11,7 +11,7 @@ openssl rand -base64 48 > $TLS/passphrase.txt
 openssl genrsa -aes128 -passout file:$TLS/passphrase.txt -out $TLS/server.key 2048
 
 # Generate a CSR (Certificate Signing Request)
-openssl req -new -passin file:$TLS/passphrase.txt -key $TLS/server.key -out $TLS/server.csr -subj "/C=VN/O=Asean Fan/OU=System Engineer Team/CN=*.aseanfan.com"
+openssl req -new -passin file:$TLS/passphrase.txt -key $TLS/server.key -out $TLS/server.csr -subj "/C=VN/O=ONAME/OU=OUDEPARTMENT/CN=*.domain.com"
 
 # Remove Passphrase from Key
 cp $TLS/server.key $TLS/server.key.org

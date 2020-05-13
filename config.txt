@@ -3,3 +3,5 @@ LDAP_PASS = adminldap
 LDAP_MASTER_IP = 192.168.14.55
 LDAP_MASTER_PORT = 389
 FQDN = mydomain.com
+ORG = mydomain
+OU = System Engineers
