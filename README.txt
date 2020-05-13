@@ -1,5 +1,6 @@
--------- HOST 1 -------- 
+-------- HOST 1 --------(MASTER) 
 0) Input the information in the file config.txt
+
 1) Build OpenLDAP Docker image:
 docker build -t openldap1 .
 
@@ -10,11 +11,18 @@ docker run -itd --name ldapmaster -v `pwd`/data/openldap:/etc/openldap \
 3) Configure OpenLDAP as master
 docker exec -it -u 0 ldapmaster /ldap_master.sh
 
-4) Check OpenLDAP's master configuration
-docker exec -it -u 0 ldapmaster -x -H ldap://localhost -b "dc=mydomain,dc=com" -D "cn=ldapadm,dc=mydomain,dc=com" -w adminldap
+4) start OpenLDAP
+docker exec -it -u 0 ldapmaster /start.sh
 
--------- HOST 2 -------- 
+5) stop OpenLDAP
+docker exec -it -u 0 ldapmaster /stop.sh
+
+6) restart OpenLDAP
+docker exec -it -u 0 ldapmaster /restart.sh
+
+-------- HOST 2 --------(SLAVE)
 0) Input the information in the file config.txt
+
 1) Transfer Docker image to HOST 2 or build a new one:
 docker build -t openldap1 .
 
@@ -24,3 +32,12 @@ docker run -itd --name ldapslave -v `pwd`/data/openldap:/etc/openldap \
 
 3) Configure OpenLDAP as slave:
 docker exec -it -u 0 ldapslave /ldap_slave.sh
+
+4) start OpenLDAP
+docker exec -it -u 0 ldapslave /start.sh
+
+5) stop OpenLDAP
+docker exec -it -u 0 ldapslave /stop.sh
+
+6) restart OpenLDAP
+docker exec -it -u 0 ldapslave /restart.sh
