@@ -27,6 +27,8 @@ FQDN="`cat $config | grep "FQDN" | awk '{print $3}'`"
 LDAP_MASTER_IP="`cat $config | grep "LDAP_MASTER_IP" | awk '{print $3}'`"
 LDAP_MASTER_PORT="`cat $config | grep "LDAP_MASTER_PORT" | awk '{print $3}'`"
 LDAP_PASS="`cat $config | grep "LDAP_PASS" | awk '{print $3}'`"
+ORG="`cat $config | grep "ORG" | awk '{print $3}'`"
+OU="`cat $config | grep "OU" | awk '{print $3 " " $NF}'`"
 DC1=`echo $FQDN | cut -d. -f1` # get DC1=mydomain
 DC2=`echo $FQDN | cut -d. -f2` # get DC2=com
 
@@ -60,8 +62,9 @@ function build_basedomain()
     sed -i -e "s@cn=Manager@cn=$CN_ADMIN@g" /basedomain.ldif
     sed -i -e "s@dc=srv@dc=$DC1@g" /basedomain.ldif
     sed -i -e "s@dc=world@dc=$DC2@g" /basedomain.ldif
+    sed -i -e "s@cn\: Manager@cn\: $CN_ADMIN@g" /basedomain.ldif
     sed -i -e "s@dc\: Srv@dc\: $DC1@g" /basedomain.ldif
-    sed -i -e "s@o: Server World@o\: $ORG@g" /basedomain.ldif
+    sed -i -e "s@o\: Server World@o\: $ORG@g" /basedomain.ldif
     ldapadd -x -w $LDAP_PASS -D "cn=$CN_ADMIN,dc=$DC1,dc=$DC2" -f /basedomain.ldif
 }
 
