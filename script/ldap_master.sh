@@ -70,6 +70,7 @@ function build_basedomain()
     sed -i -e "s@dc=srv@dc=$DC1@g" /basedomain.ldif
     sed -i -e "s@dc=world@dc=$DC2@g" /basedomain.ldif
     sed -i -e "s@dc\: Srv@dc\: $DC1@g" /basedomain.ldif
+    sed -i -e "s@o: Server World@o\: $ORG@g" /basedomain.ldif
     ldapadd -x -w $LDAP_PASS -D "cn=$CN_ADMIN,dc=$DC1,dc=$DC2" -f /basedomain.ldif
 }
 
